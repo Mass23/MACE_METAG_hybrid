@@ -102,6 +102,14 @@ def run_trim_galore(samples, threads, results_folder_name):
         with open(f'{results_folder_name}/log.txt', 'a') as log:
             log.write(' '.join(args) + '\n\n')
 
+def run_megahit(file1, file2, out_folder):
+    args = ['megahit --presets meta-large', '--k-min 27', '--k-step 10',
+            '-1', file1, '-2', file2, '-o', out_folder]
+    subprocess.call(' '.join(args), shell = True)
+
+    with open(f'{results_folder_name}/log.txt', 'a') as log:
+        log.write(' '.join(args) + '\n\n')
+
 
 ################################################################################
 #################             MAIN             #################################

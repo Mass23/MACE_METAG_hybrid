@@ -8,15 +8,13 @@
   
   b. Create the conda environment for metagenome assembly `conda env create -f MACE_METAG_assemble.yml \ conda activate MACE_METAG_assemble`
   
-  c. Run example (in the example file) `python3 assemble_metagenomes.py -f path_to_reads/ -n run_name -m metadata.tsv -t 24` from within the repository, -f is the data folder (reads), -n is the name for the output, metadata.tsv is the metadata file (look at the one in the repo for guidance, needs the Barcode and Well columns), -t is the numbers of threads to use.
+  c. Run example (in the example file) `python3 assemble_metagenome.py -f path_to_reads/ -n run_name -m metadata.tsv -t 24` from within the repository, -f is the data folder (reads), -n is the name for the output folder, metadata.tsv is the metadata file (look at the one in the repo for guidance, the Subset column gives the information on what samples should be assembled together), -t is the numbers of threads to use.
 
 # 2. Bins creation and analysis
 
-  a. Porechop: removes adapters
-  
-  b. Chopper: quality control (q > 9) and size (only keeps reads from 1300bp to 1800bp)
-  
-  c. Qiime2: dereplicates sequences, creates abundance table, and taxonokmy based on greengenes2
+  a. ...
+
+  b. lll
 
 # 3. Results/ folder
 to do...

@@ -23,7 +23,6 @@ def print_env_summary(results_folder_name):
     with open(f'{results_folder_name}/log.txt', 'a') as log:
         log.write('Creating the list_conda.txt file that summarises the conda env.' + '\n\n')
 
-
 def load_metadata(metadata_path):
     metadata = pd.read_csv(metadata_path, sep='\t', header=0)
     return(metadata)
@@ -89,181 +88,20 @@ def concatenate_files(folder_path, metadata, samples, results_folder_name):
 
 # Reads preprocessing part
 
-def run_porechop(samples, threads, results_folder_name):
+def run_trim_galore(samples, threads, results_folder_name):
     with open(f'{results_folder_name}/log.txt', 'a') as log:
         log.write(f'Running porechop...' + '\n\n')
 
     for sample in samples:
         reads_in = f'{results_folder_name}/raw_data/{sample}.fastq.gz'
         reads_out = f'{results_folder_name}/raw_data/{sample}_porechopped.fastq.gz'
-        args = ['porechop', '--threads', str(threads), '-i', reads_in, '-o',
-                reads_out]
+        args = ['trim_galore --paired --illumina ',
+                *.clock_UMI.R1.fq.gz *.clock_UMI.R2.fq.gz']
         subprocess.call(' '.join(args), shell = True)
 
         with open(f'{results_folder_name}/log.txt', 'a') as log:
             log.write(' '.join(args) + '\n\n')
 
-def run_chopper(samples, threads, results_folder_name):
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-        log.write(f'Running chopper...' + '\n\n')
-
-    for sample in samples:
-        reads_in = f'{results_folder_name}/raw_data/{sample}_porechopped.fastq.gz'
-        reads_out = f'{results_folder_name}/raw_data/{sample}_chopped.fastq.gz'
-        args = ['gunzip', '-c', reads_in, '|',
-                'chopper', '-q', str(12), '--maxlength', str(1800),
-                           '--minlength', str(1200), '--threads', str(threads),
-                '|', 'gzip', '>', reads_out]
-        subprocess.call(' '.join(args), shell = True)
-        subprocess.call(f'rm {reads_in}', shell = True)
-
-        with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args) + '\n\n')
-
-
-
-# Qiime 2 part
-
-def create_manifest(results_folder_name):
-    os.makedirs(f'{results_folder_name}/qiime2')
-    full_path = os.getcwd()
-    manifest = pd.DataFrame(columns=['sample-id', 'absolute-filepath'])
-    
-    sample_files = glob.glob(f'{results_folder_name}/raw_data/*_chopped.fastq.gz')
-    samples = [sample.split('/')[2].replace('_chopped.fastq.gz','') for sample in sample_files]
-    print(samples)
-    for sample in samples:
-        manifest.loc[len(manifest.index)] = [sample, f'{full_path}/{results_folder_name}/raw_data/{sample}_chopped.fastq.gz'] 
-    manifest.to_csv(f'{results_folder_name}/qiime2/qiime2_manifest.tsv', sep='\t', index=False) 
-
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-        log.write('Qiime2 manifest created...' + '\n\n')
-
-def import_qiime2(results_folder_name):
-    """
-    Import the data into qiime with a manifest, print the visualisation for quality assessement.
-    """
-    args_1 = ['qiime tools import', '--type', "'SampleData[SequencesWithQuality]'",
-            '--input-path', f'{results_folder_name}/qiime2/qiime2_manifest.tsv', 
-            '--output-path' , f'{results_folder_name}/qiime2/preprocessed_reads.qza',
-            '--input-format', 'SingleEndFastqManifestPhred33V2']
-    subprocess.call(' '.join(args_1), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_1) + '\n\n')
-
-    args_2 = ['qiime demux summarize',
-             '--i-data', f'{results_folder_name}/qiime2/preprocessed_reads.qza',
-             '--o-visualization', f'{results_folder_name}/qiime2/preprocessed_reads.qzv']
-    subprocess.call(' '.join(args_2), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_2) + '\n\n')
-
-def dereplicate_qiime2(results_folder_name, threads):
-    """
-    Dereplicate sequences and do chimera removal steps using uchime denovo.
-    """
-    args_1 = ['qiime vsearch dereplicate-sequences',
-              '--i-sequences', f'{results_folder_name}/qiime2/preprocessed_reads.qza',
-              '--o-dereplicated-table', f'{results_folder_name}/qiime2/table-dereplicated.qza', 
-              '--o-dereplicated-sequences', f'{results_folder_name}/qiime2/rep-seqs-dereplicated.qza']
-    subprocess.call(' '.join(args_1), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_1) + '\n\n')
-
-    args_2 = ['qiime vsearch cluster-features-de-novo',
-              '--p-strand', 'both',
-              '--i-table', f'{results_folder_name}/qiime2/table-dereplicated.qza',
-              '--i-sequences', f'{results_folder_name}/qiime2/rep-seqs-dereplicated.qza',
-              '--p-perc-identity', '0.97', '--p-threads', threads,
-              '--o-clustered-table', f'{results_folder_name}/qiime2/otu-table.qza',
-              '--o-clustered-sequences', f'{results_folder_name}/qiime2/otu-seqs.qza']
-    subprocess.call(' '.join(args_2), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_2) + '\n\n')
-
-    args_3 = ['qiime feature-table filter-features',
-              '--i-table', f'{results_folder_name}/qiime2/otu-table.qza',
-              '--p-min-frequency', '2', 
-              '--o-filtered-table', f'{results_folder_name}/qiime2/otu-table-filtered.qza']
-    subprocess.call(' '.join(args_3), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_3) + '\n\n')
-
-    args_4 = ['qiime feature-table filter-seqs',
-              '--i-data', f'{results_folder_name}/qiime2/otu-seqs.qza',
-              '--i-table', f'{results_folder_name}/qiime2/otu-table-filtered.qza',
-              '--o-filtered-data', f'{results_folder_name}/qiime2/otu-seqs-filtered.qza']
-    subprocess.call(' '.join(args_4), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_4) + '\n\n')
-
-    args_5 = f'qiime feature-table summarize --i-table {results_folder_name}/qiime2/otu-table-filtered.qza --o-visualization {results_folder_name}/qiime2/otu-table-filtered.qzv'
-    subprocess.call(args_5, shell = True)
-    
-    # if one day chimera detection is needed
-    #args_2 = ['qiime vsearch uchime-denovo',
-    #          '--i-table', f'{results_folder_name}/qiime2/table-dereplicated.qza',
-    #          '--i-sequences',  f'{results_folder_name}/qiime2/rep-seqs-dereplicated.qza',
-    #          '--output-dir', f'{results_folder_name}/qiime2/uchime-dn-out']
-    #subprocess.call(' '.join(args_2), shell = True)
-    #with open(f'{results_folder_name}/log.txt', 'a') as log:
-    #        log.write(' '.join(args_2) + '\n\n')
-    #
-    #args_3 = ['qiime feature-table filter-features',
-    #          '--i-table', f'{results_folder_name}/qiime2/table-dereplicated.qza', 
-    #          '--m-metadata-file', f'{results_folder_name}/qiime2/uchime-dn-out/chimeras.qza',
-    #          '--p-exclude-ids',
-    #          '--o-filtered-table', f'{results_folder_name}/qiime2/table-dereplicated-nonchimeric.qza']
-    #subprocess.call(' '.join(args_3), shell = True)
-    #with open(f'{results_folder_name}/log.txt', 'a') as log:
-    #        log.write(' '.join(args_3) + '\n\n')
-    #
-    #args_4 = ['qiime feature-table filter-seqs',
-    #          '--i-data', f'{results_folder_name}/qiime2/rep-seqs-dereplicated.qza',
-    #          '--m-metadata-file', f'{results_folder_name}/qiime2/uchime-dn-out/chimeras.qza',
-    #          '--p-exclude-ids',
-    #          '--o-filtered-data', f'{results_folder_name}/qiime2/rep-seqs-dereplicated-nonchimeric.qza']
-    #subprocess.call(' '.join(args_4), shell = True)
-    #with open(f'{results_folder_name}/log.txt', 'a') as log:
-    #        log.write(' '.join(args_4) + '\n\n')
-
-def taxonomy_qiime2(results_folder_name, threads):
-    if not os.path.exists(f'{results_folder_name}/qiime2/2022.10.backbone.full-length.fna.qza'):
-        args_1 = ['wget', '-P', f'{results_folder_name}/qiime2/',
-        'http://ftp.microbio.me/greengenes_release/current/sklearn-1.4.2-compatible-nb-classifiers/2022.10.backbone.full-length.nb.sklearn-1.4.2.qza']
-        subprocess.call(' '.join(args_1), shell = True)
-        with open(f'{results_folder_name}/log.txt', 'a') as log:
-                log.write(' '.join(args_1) + '\n\n')
-
-    args_2 = ['qiime feature-classifier classify-sklearn','--p-n-jobs', threads,
-              '--i-reads', f'{results_folder_name}/qiime2/otu-seqs-filtered.qza', 
-              '--i-classifier', f'{results_folder_name}/qiime2/2022.10.backbone.full-length.nb.sklearn-1.4.2.qza',
-              '--o-classification', f'{results_folder_name}/qiime2/taxonomy-classification.qza']
-    subprocess.call(' '.join(args_2), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_2) + '\n\n')
-
-def export_qiime2(results_folder_name):
-    args_1 = ['qiime', 'tools', 'export', 
-              '--input-path', f'{results_folder_name}/qiime2/otu-seqs-filtered.qza', 
-              '--output-path', f'{results_folder_name}/exports']
-    subprocess.call(' '.join(args_1), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_1) + '\n\n')
-
-    args_2 = ['qiime', 'tools', 'export', 
-              '--input-path', f'{results_folder_name}/qiime2/otu-table-filtered.qza', 
-              '--output-path', f'{results_folder_name}/exports']
-    subprocess.call(' '.join(args_2), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_2) + '\n\n')
-
-    args_3 = ['qiime', 'tools', 'export', 
-              '--input-path', f'{results_folder_name}/qiime2/taxonomy-classification.qza', 
-              '--output-path', f'{results_folder_name}/exports']
-    subprocess.call(' '.join(args_3), shell = True)
-    with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args_3) + '\n\n')
 
 ################################################################################
 #################             MAIN             #################################
@@ -274,8 +112,10 @@ def main():
     parser = argparse.ArgumentParser(description="List files in a folder")
 
     # Add the folder path argument
-    parser.add_argument("-f", "--folder", type=str,
+    parser.add_argument("-illu", "--illumina-folder", type=str,
                         help="Path to the folder as a string", required=True)
+    parser.add_argument("-nano", "--nanopore-folder", type=str,
+                        help="Path to the folder as a string")
     parser.add_argument("-n", "--name", type=str,
                         help="Name of the results folder (_results will be added at the end)", required=True)
     parser.add_argument("-m", "--metadata_file", type=str,
@@ -292,28 +132,24 @@ def main():
     args = parser.parse_args()
     out_folder = f'{args.name}_results'
     
-    if args.skippreprocessing is False:
-        # Create results folder, print the environment summary, load the metadata
-        # and list the samples to process
-        create_result_folder(out_folder)
-        print_env_summary(out_folder)
-        metadata = load_metadata(args.metadata_file)
-        samples = list_subfolders(args.folder)
-        metadata, samples_to_process = check_metadata_samples(metadata, samples, out_folder)
+    create_result_folder(out_folder)
+    print_env_summary(out_folder)
+    metadata = load_metadata(args.metadata_file)
+    
+    samples = list_subfolders(args.folder)
+    metadata, samples_to_process = check_metadata_samples(metadata, samples, out_folder)
 
         # Concatenate files belonging to the same sample in the new directory,
         # run porechop and chopper
-        samples_names = concatenate_files(args.folder, metadata, samples_to_process, out_folder)
-        run_porechop(samples_names, args.threads, out_folder)
-        run_chopper(samples_names, args.threads, out_folder)
+    run_trim_galore(samples, threads, out_folder)
+    samples_names = concatenate_files(args.folder, metadata, samples_to_process, out_folder)
 
-    if args.skipqiime2 is False:
-        # Create the Qiime manifest, run qiime analysis
-        create_manifest(out_folder)
-        import_qiime2(out_folder)
-        dereplicate_qiime2(out_folder, args.threads)
-        taxonomy_qiime2(out_folder, args.threads)
-        export_qiime2(out_folder)
+    full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')
+    full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
+
+    sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'megahit')
+    sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
+    
 
 if __name__ == "__main__":
     main()

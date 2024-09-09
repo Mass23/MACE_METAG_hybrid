@@ -108,9 +108,9 @@ def main():
     parser = argparse.ArgumentParser(description="List files in a folder")
 
     # Add the folder path argument
-    parser.add_argument("-illu", "--illumina-folder", type=str,
+    parser.add_argument("-illu", "--illuminafolder", type=str,
                         help="Path to the folder as a string", required=True)
-    parser.add_argument("-nano", "--nanopore-folder", type=str,
+    parser.add_argument("-nano", "--nanoporefolder", type=str,
                         help="Path to the folder as a string")
     parser.add_argument("-n", "--name", type=str,
                         help="Name of the results folder (_results will be added at the end)", required=True)
@@ -129,7 +129,7 @@ def main():
     create_result_folder(out_folder)
     print_env_summary(out_folder)
     
-    samples = list_samples(args.folder)
+    samples = list_samples(args.illuminafolder)
     run_trimming(samples, out_folder)
 
     #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')

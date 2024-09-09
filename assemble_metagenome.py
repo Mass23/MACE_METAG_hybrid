@@ -39,7 +39,7 @@ def list_samples(folder_path):
             return
 
         # List all entries in the directory
-        files = glob.glob(f'{folder_path}*/10*.fastq.gz')
+        files = glob.glob(f'{folder_path}*/*.fastq.gz')
         files = [file.replace('_R1_001.fastq.gz', '').replace('_R2_001.fastq.gz', '') for file in files]
         samples = list(set(files))
         return(samples)

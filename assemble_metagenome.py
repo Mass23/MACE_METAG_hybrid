@@ -41,7 +41,9 @@ def list_samples(folder_path):
         # List all entries in the directory
         files = glob.glob(f'{folder_path}*/*.fastq.gz')
         files = [file.replace('_R1_001.fastq.gz', '').replace('_R2_001.fastq.gz', '') for file in files]
+        files = [file for file in files if 'control' not in file]
         samples = list(set(files))
+        print(samples)
         return(samples)
 
     except Exception as e:

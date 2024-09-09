@@ -39,7 +39,7 @@ def list_samples(folder_path):
             return
 
         # List all entries in the directory
-        files = glob.glob(f'{folder_path}*/*.fastq.gz')
+        files = glob.glob(f'{folder_path}*/10*.fastq.gz')
         files = [file.replace('_R1_001.fastq.gz', '').replace('_R2_001.fastq.gz', '') for file in files]
         samples = list(set(files))
         return(samples)
@@ -89,14 +89,38 @@ def run_trimming(samples, results_folder_name):
     pool = multiprocessing.Pool(10)
     pool.starmap(sample_trim_galore, zip(samples, [results_folder_name for sample in samples])) 
 
-
-def run_megahit(file1, file2, out_folder):
-    args = ['megahit --presets meta-large', '--k-min 27', '--k-step 10',
-            '-1', file1, '-2', file2, '-o', out_folder]
+# Metagenome assembly
+def run_megahit(file1, file2, results_folder_name, threads):
+    args = [f'megahit --presets meta-large --k-min 27 --k-max 87 --k-step 10 --min-contig-len 1000 -t {threads}', 
+            f'-1 {file1} -2 {file2} -o {results_folder_name}/full_coassembly_megahit']
     subprocess.call(' '.join(args), shell = True)
 
     with open(f'{results_folder_name}/log.txt', 'a') as log:
         log.write(' '.join(args) + '\n\n')
+
+def run_metaspades(file1, file2, results_folder_name, threads):
+    args = [f'metaspades.py -t {threads} -m 400 -k 27,37,47,57,67,77,87', 
+            f'-1 {file1} -2 {file2} -o {results_folder_name}/full_coassembly_metaspades']
+    subprocess.call(' '.join(args), shell = True)
+
+    with open(f'{results_folder_name}/log.txt', 'a') as log:
+        log.write(' '.join(args) + '\n\n')
+
+def full_coassembly(results_folder_name, threads, software = 'both'):
+    all_r1 = f'{results_folder_name}trimmed_reads/all_trimmed_R1.fq.gz'
+    all_r2 = f'{results_folder_name}/trimmed_reads/all_trimmed_R2.fq.gz'
+
+    subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r1}')
+    subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_2.fq.gz > {all_r2}')
+    with open(f'{results_folder_name}/log.txt', 'a') as log:
+        log.write(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r1}' + '\n\n')
+        log.write(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r2}' + '\n\n')
+
+    if software in ['both', 'megahit']:
+        run_megahit(all_r1, all_r2, results_folder_name, threads)
+    
+    if software in ['both', 'metaspades']:
+        run_metaspades(all_r1, all_r2, results_folder_name, threads)
 
 
 ################################################################################
@@ -131,6 +155,8 @@ def main():
     
     samples = list_samples(args.illuminafolder)
     run_trimming(samples, out_folder)
+
+    full_coassembly(out_folder, args.threads, sofware = 'both')
 
     #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')
     #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'metaspades')

@@ -4,6 +4,7 @@ import subprocess
 import pandas as pd # type: ignore
 import datetime
 import glob
+import multiprocessing
 
 ################################################################################
 #################           FUNCTIONS           ################################
@@ -27,7 +28,7 @@ def load_metadata(metadata_path):
     metadata = pd.read_csv(metadata_path, sep='\t', header=0)
     return(metadata)
 
-def list_subfolders(folder_path):
+def list_samples(folder_path):
     """
     Lists all folders in the given folder (= samples fastq files).
     """
@@ -38,12 +39,10 @@ def list_subfolders(folder_path):
             return
 
         # List all entries in the directory
-        entries = os.listdir(folder_path)
-
-        # Filter out files, keep only directories
-        subfolders = [entry for entry in entries if os.path.isdir(os.path.join(folder_path, entry))]
-        filtered_subfolders = [subfolder for subfolder in subfolders if subfolder != 'unclassified']
-        return(filtered_subfolders)
+        files = glob.glob(f'{folder_path}*/*.fastq.gz')
+        files = [file.replace('_R1_001.fastq.gz', '').replace('_R2_001.fastq.gz', '') for file in files]
+        samples = list(set(files))
+        return(samples)
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -70,37 +69,26 @@ def check_metadata_samples(metadata, samples, results_folder_name):
     out_list = [sample for sample in list(metadata_samples) if sample in files_samples]
     return metadata.loc[metadata['Barcode'].isin(out_list)], out_list
 
-def concatenate_files(folder_path, metadata, samples, results_folder_name):
-    """
-    Takes folder paths, metadata files and samples list and concatenate the data
-    for each sample in the list, + renames it to the sample name using metadata.
-    """
-    os.makedirs('%s/raw_data' % (results_folder_name))
-    new_samples = []
-    for sample in samples:
-        new_sample = metadata.loc[metadata['Barcode'] == sample, '#SampleID'].values[0]
-        new_path = f'{results_folder_name}/raw_data/{new_sample}.fastq.gz'
-        args = ['cat', folder_path + sample + '/*.fastq.gz', '>', new_path]
-        subprocess.call(' '.join(args), shell = True)
-        new_samples.append(new_sample)
-    return(new_samples)
 
 
 # Reads preprocessing part
+def sample_trim_galore(sample, results_folder_name):
+    reads1_in = f'{sample}_R1_001.fastq.gz'
+    reads2_in = f'{sample}_R2_001.fastq.gz'
+        
+    args = ['trim_galore --fastqc --paired --length 50 -j 4',
+            '-o {results_folder_name}/trimmed_reads', reads1_in, reads2_in]
+    subprocess.call(' '.join(args), shell = True)
 
-def run_trim_galore(samples, threads, results_folder_name):
     with open(f'{results_folder_name}/log.txt', 'a') as log:
-        log.write(f'Running porechop...' + '\n\n')
+        log.write(' '.join(args) + '\n\n')
 
-    for sample in samples:
-        reads_in = f'{results_folder_name}/raw_data/{sample}.fastq.gz'
-        reads_out = f'{results_folder_name}/raw_data/{sample}_porechopped.fastq.gz'
-        args = ['trim_galore --paired --illumina ',
-                *.clock_UMI.R1.fq.gz *.clock_UMI.R2.fq.gz']
-        subprocess.call(' '.join(args), shell = True)
+def run_trimming(samples, results_folder_name):
+    os.makedirs(f'{results_folder_name}/trimmed_reads')
 
-        with open(f'{results_folder_name}/log.txt', 'a') as log:
-            log.write(' '.join(args) + '\n\n')
+    pool = multiprocessing.Pool(10)
+    pool.starmap(sample_trim_galore, zip(samples, [results_folder_name for sample in samples])) 
+
 
 def run_megahit(file1, file2, out_folder):
     args = ['megahit --presets meta-large', '--k-min 27', '--k-step 10',
@@ -126,14 +114,12 @@ def main():
                         help="Path to the folder as a string")
     parser.add_argument("-n", "--name", type=str,
                         help="Name of the results folder (_results will be added at the end)", required=True)
-    parser.add_argument("-m", "--metadata_file", type=str,
-                        help="Path to the metadata tsv file", required=True)
+    #parser.add_argument("-m", "--metadata_file", type=str,
+    #                    help="Path to the metadata tsv file", required=True)
     parser.add_argument("-t", "--threads", type=str,
                         help="Number of threads to use for multiprocessing-compatible tasks", required=True)
     parser.add_argument("--skippreprocessing", action='store_true',
                         help="To add if you want to skip preprocessing")
-    parser.add_argument("--skipqiime2", action='store_true',
-                        help="To add if you want to skip the qiime2 part (only preprocessing)")
 
 
     # Parse arguments
@@ -142,21 +128,15 @@ def main():
     
     create_result_folder(out_folder)
     print_env_summary(out_folder)
-    metadata = load_metadata(args.metadata_file)
     
-    samples = list_subfolders(args.folder)
-    metadata, samples_to_process = check_metadata_samples(metadata, samples, out_folder)
+    samples = list_samples(args.folder)
+    run_trimming(samples, out_folder)
 
-        # Concatenate files belonging to the same sample in the new directory,
-        # run porechop and chopper
-    run_trim_galore(samples, threads, out_folder)
-    samples_names = concatenate_files(args.folder, metadata, samples_to_process, out_folder)
+    #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')
+    #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
 
-    full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')
-    full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
-
-    sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'megahit')
-    sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
+    #sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'megahit')
+    #sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
     
 
 if __name__ == "__main__":

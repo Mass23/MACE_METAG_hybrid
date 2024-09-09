@@ -77,7 +77,7 @@ def sample_trim_galore(sample, results_folder_name):
     reads2_in = f'{sample}_R2_001.fastq.gz'
         
     args = ['trim_galore --fastqc --paired --length 50 -j 4',
-            '-o {results_folder_name}/trimmed_reads', reads1_in, reads2_in]
+            f'-o {results_folder_name}/trimmed_reads', reads1_in, reads2_in]
     subprocess.call(' '.join(args), shell = True)
 
     with open(f'{results_folder_name}/log.txt', 'a') as log:

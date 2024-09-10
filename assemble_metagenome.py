@@ -109,7 +109,7 @@ def run_metaspades(file1, file2, results_folder_name, threads):
         log.write(' '.join(args) + '\n\n')
 
 def full_coassembly(results_folder_name, threads, software = 'both'):
-    all_r1 = f'{results_folder_name}trimmed_reads/all_trimmed_R1.fq.gz'
+    all_r1 = f'{results_folder_name}/trimmed_reads/all_trimmed_R1.fq.gz'
     all_r2 = f'{results_folder_name}/trimmed_reads/all_trimmed_R2.fq.gz'
 
     subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r1}')
@@ -152,13 +152,13 @@ def main():
     args = parser.parse_args()
     out_folder = f'{args.name}_results'
     
-    create_result_folder(out_folder)
-    print_env_summary(out_folder)
+    #create_result_folder(out_folder)
+    #print_env_summary(out_folder)
     
-    samples = list_samples(args.illuminafolder)
-    run_trimming(samples, out_folder)
+    #samples = list_samples(args.illuminafolder)
+    #run_trimming(samples, out_folder)
 
-    full_coassembly(out_folder, args.threads, sofware = 'both')
+    full_coassembly(out_folder, args.threads, software = 'both')
 
     #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')
     #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'metaspades')

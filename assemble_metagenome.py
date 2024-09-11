@@ -124,6 +124,20 @@ def full_coassembly(results_folder_name, threads, software = 'both'):
     if software in ['both', 'metaspades']:
         run_metaspades(all_r1, all_r2, results_folder_name, threads)
 
+def assemblies_stats(results_folder_name, threads, software = 'both'):
+    if software == 'both':
+        assembly_files = ''
+    elif software == 'metaspades':
+        assembly_files = ''
+    elif software == 'megahit':
+        assembly_files = '{results_folder_name}/full_coassembly_megahit/final.contigs.fa'
+    else:
+        print('The method set for software is not recognised, skipping the metaquast run.')
+        return()
+
+
+    args = f'metaquast {assembly_files} -t {threads} -o {results_folder_name}/metaquast_results'
+    subprocess.call(args, shell = True)
 
 ################################################################################
 #################             MAIN             #################################
@@ -159,12 +173,7 @@ def main():
     #run_trimming(samples, out_folder)
 
     full_coassembly(out_folder, args.threads, software = 'both')
-
-    #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'megahit')
-    #full_coassembly(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
-
-    #sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'megahit')
-    #sub_coassemblies(out_folder, metadata, samples_names, args.threads, software = 'metaspades')
+    assemblies_stats(out_folder, args.threads, software = 'both')
     
 
 if __name__ == "__main__":

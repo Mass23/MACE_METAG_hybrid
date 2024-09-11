@@ -112,8 +112,8 @@ def full_coassembly(results_folder_name, threads, software = 'both'):
     all_r1 = f'{results_folder_name}/trimmed_reads/all_trimmed_R1.fq.gz'
     all_r2 = f'{results_folder_name}/trimmed_reads/all_trimmed_R2.fq.gz'
 
-    subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r1}')
-    subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_2.fq.gz > {all_r2}')
+    subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r1}', shell = True)
+    subprocess.call(f'cat {results_folder_name}/trimmed_reads/*_val_2.fq.gz > {all_r2}', shell = True)
     with open(f'{results_folder_name}/log.txt', 'a') as log:
         log.write(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r1}' + '\n\n')
         log.write(f'cat {results_folder_name}/trimmed_reads/*_val_1.fq.gz > {all_r2}' + '\n\n')

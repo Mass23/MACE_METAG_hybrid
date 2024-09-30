@@ -83,22 +83,23 @@ def summarise_rosella(results_folder_name):
         for file in fasta_files:
             fasta_bins = SeqIO.parse(open(file),'fasta')
             for contig in fasta_bins:
-                out_bins.write(f'{contig.id}\t{file}')
+                out_bins.write(f'{contig.id}\t{file.split('/')[-1]}\n')
 
 def summarise_concoct(results_folder_name):
     clustering_file = f'{results_folder_name}/binning/concoct/clustering_gt1000.csv' 
     with open(f'{results_folder_name}/binning/concoct_bins.tsv', 'w') as out_bins:
-        opened_clustering_file = open(clustering_file,'r').read()
-        opened_clustering_file = opened_clustering_file.replace(',', '\tconcoct_bin')
-        out_bins.write(opened_clustering_file)
+        opened_clustering_file = open(clustering_file,'r').readlines()
+        for i, line in enumerate(opened_clustering_file):
+            if i > 0:
+                out_bins.write(f"{line.replace(',', '\tconcoct_bin.')}\n")
 
 def summarise_metabat2(results_folder_name):
     contig_files = glob.glob(f'{results_folder_name}/binning/metabat2/*.*')
-    with open(f'{results_folder_name}/binning/rosella_bins.tsv', 'w') as out_bins:
+    with open(f'{results_folder_name}/binning/metabat2_bins.tsv', 'w') as out_bins:
         for file in contig_files:
             contigs = open(file, 'r').readlines()
             for contig in contigs:
-                out_bins.write(f'{contig}\t{file}')
+                out_bins.write(f'{contig}\t{file}\n')
 
 
 def run_dastool(results_folder_name):

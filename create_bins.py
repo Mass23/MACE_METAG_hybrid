@@ -77,6 +77,30 @@ def run_metabat2(results_folder_name, assembly_path, threads):
     subprocess.call(args1, shell = True)
     subprocess.call(args2, shell = True)
 
+def summarise_rosella(results_folder_name):
+    fasta_files = glob.glob(f'{results_folder_name}/binning/rosella_out/*.fna')
+    with open(f'{results_folder_name}/binning/rosella_bins.tsv', 'w') as out_bins:
+        for file in fasta_files:
+            fasta_bins = SeqIO.parse(open(file),'fasta')
+            for contig in fasta_bins:
+                out_bins.write(f'{contig.id}\t{file}')
+
+def summarise_concoct(results_folder_name):
+    clustering_file = f'{results_folder_name}/binning/concoct/clustering_gt1000.csv' 
+    with open(f'{results_folder_name}/binning/concoct_bins.tsv', 'w') as out_bins:
+        opened_clustering_file = open(clustering_file,'r').read()
+        opened_clustering_file = opened_clustering_file.replace(',', '\tconcoct_bin')
+        out_bins.write(opened_clustering_file)
+
+def summarise_metabat2(results_folder_name):
+    contig_files = glob.glob(f'{results_folder_name}/binning/metabat2/*.*')
+    with open(f'{results_folder_name}/binning/rosella_bins.tsv', 'w') as out_bins:
+        for file in contig_files:
+            contigs = open(file, 'r').readlines()
+            for contig in contigs:
+                out_bins.write(f'{contig}\t{file}')
+
+
 def run_dastool(results_folder_name):
     os.makedirs(f'{results_folder_name}/binning/dastool')
     args = f'DAS_Tool'
@@ -112,6 +136,10 @@ def main():
     run_concoct(out_folder, args.assembly, args.threads)
     run_rosella(out_folder, args.assembly, args.threads)
     run_metabat2(out_folder, args.assembly, args.threads)
+
+    summarise_rosella(out_folder)
+    summarise_metabat2(out_folder)
+    summarise_concoct(out_folder)
 
     run_dastool(out_folder)
     

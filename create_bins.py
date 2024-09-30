@@ -83,7 +83,7 @@ def summarise_rosella(results_folder_name):
         for file in fasta_files:
             fasta_bins = SeqIO.parse(open(file),'fasta')
             for contig in fasta_bins:
-                out_bins.write(f'{contig.id}\t{file.split('/')[-1]}\n')
+                out_bins.write(f"{contig.id}\t{file.split('/')[-1]}\n")
 
 def summarise_concoct(results_folder_name):
     clustering_file = f'{results_folder_name}/binning/concoct/clustering_gt1000.csv' 

@@ -4,7 +4,7 @@ import subprocess
 import pandas as pd # type: ignore
 import datetime
 import glob
-import multiprocessing
+from Bio import SeqIO
 
 ################################################################################
 #################           FUNCTIONS           ################################
@@ -71,7 +71,7 @@ def run_metabat2(results_folder_name, assembly_path, threads):
     assembly = assembly_path.replace('.fa', '.filtered.renamed.fa')
     coverm_output_path = f'{results_folder_name}/binning/coverm'
 
-    args1 = f'gzip -c {assembly} > {assembly.gz}' # metabat2 requires gzipped fasta file for the assembly
+    args1 = f'gzip -c {assembly} > {assembly}.gz' # metabat2 requires gzipped fasta file for the assembly
     args2 = f'metabat2 -i {assembly}.gz -l -o {results_folder_name}/binning/metabat2/bins_metabat --saveCls -a {coverm_output_path}/coverm_metabat.tsv -t {threads} --minContig 1500 --seed 23'
     
     subprocess.call(args1, shell = True)
